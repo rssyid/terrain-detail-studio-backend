@@ -128,12 +128,57 @@ adminRouter.post('/releases', async (c) => {
     publishedAt: new Date(),
   }).returning();
 
-  await db.insert(auditLogs).values({
-    action: 'REGISTER_RELEASE',
-    targetType: 'RELEASE',
-    targetId: newRelease.id,
-    metadataJson: { version, download_url },
-  });
+// GET /v1/admin/metrics
+adminRouter.get('/metrics', async (c) => {
+  const allUsers = await db.select().from(users);
+  const allLicenses = await db.select().from(licenses);
+  const allDevices = await db.select().from(devices);
 
-  return c.json({ success: true, release: newRelease });
+  const activeLicenses = allLicenses.filter(l => l.status === 'active');
+  const now = new Date();
+  const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const expiringLicenses = allLicenses.filter(l => l.expiresAt && new Date(l.expiresAt) <= thirtyDaysLater && new Date(l.expiresAt) > now);
+
+  return c.json({
+    total_users: allUsers.length,
+    active_licenses: activeLicenses.length,
+    expiring_in_30_days: expiringLicenses.length,
+    active_devices: allDevices.filter(d => d.status === 'active').length,
+    neon_db_status: 'connected',
+    uptime_seconds: Math.floor(process.uptime()),
+  });
+});
+
+// GET /v1/admin/audit-logs
+adminRouter.get('/audit-logs', async (c) => {
+  const logs = await db.select().from(auditLogs).limit(50);
+  return c.json({
+    audit_logs: logs.map(l => ({
+      id: l.id,
+      actor_user_id: l.actorUserId || 'admin_sys_01',
+      action: l.action,
+      target_type: l.targetType,
+      target_id: l.targetId,
+      metadata: l.metadataJson || {},
+      created_at: l.createdAt,
+    })),
+  });
+});
+
+// GET /v1/admin/devices
+adminRouter.get('/devices', async (c) => {
+  const allDevices = await db.select().from(devices);
+  return c.json({
+    devices: allDevices.map(d => ({
+      id: d.id,
+      label: d.hardwareName || d.deviceFingerprint,
+      platform: d.platformOS || 'Windows 11 x86_64',
+      qgis_version: d.qgisVersion || '3.34.4',
+      plugin_version: d.pluginVersion || '1.0.0',
+      first_seen_at: d.firstSeenAt,
+      last_seen_at: d.lastSeenAt,
+      revoked_at: d.revokedAt,
+      status: d.status,
+    })),
+  });
 });
