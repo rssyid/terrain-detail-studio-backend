@@ -1,4 +1,4 @@
-import { handle } from '@hono/node-server/vercel';
-import app from '../dist/src/index.js';
+import { handle } from 'hono/vercel';
+import app from '../src/index.js';
 
 export default handle(app);
