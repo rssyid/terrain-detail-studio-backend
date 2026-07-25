@@ -10,7 +10,7 @@ adminRouter.use('*', async (c, next) => {
   if (c.req.method === 'OPTIONS') {
     return next();
   }
-  const apiKey = c.req.header('X-Admin-API-Key') || c.req.header('Authorization')?.replace('Bearer ', '');
+  const apiKey = c.req.header('x-admin-api-key') || c.req.header('X-Admin-API-Key') || c.req.header('authorization')?.replace('Bearer ', '');
   const expectedKey = process.env.ADMIN_API_KEY || 'tds_admin_secret_key_change_in_production';
 
   if (!apiKey || apiKey !== expectedKey) {
@@ -54,14 +54,26 @@ adminRouter.post('/licenses', async (c) => {
   }
 
   const targetPlanCode = plan_code || 'individual_pro';
-  const planRecord = await db.query.plans.findFirst({ where: eq(plans.code, targetPlanCode) });
+  let planRecord = await db.query.plans.findFirst({ where: eq(plans.code, targetPlanCode) });
+  if (!planRecord) {
+    planRecord = await db.query.plans.findFirst();
+  }
+  if (!planRecord) {
+    const [createdPlan] = await db.insert(plans).values({
+      code: targetPlanCode,
+      name: 'Individual Pro Subscription',
+      billingCycle: 'annual',
+      priceCents: 29900,
+    }).returning();
+    planRecord = createdPlan;
+  }
 
   const days = duration_days || 365;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
   const [newLicense] = await db.insert(licenses).values({
     userId: user.id,
-    planId: planRecord?.id || '00000000-0000-0000-0000-000000000000',
+    planId: planRecord.id,
     status: 'active',
     expiresAt: expiresAt,
     maxDevices: max_devices || 2,
