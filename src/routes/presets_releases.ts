@@ -58,7 +58,7 @@ presetsReleasesRouter.get('/releases/latest', async (c) => {
     return c.json({
       version: '1.0.0',
       min_qgis_version: '3.28.0',
-      download_url: 'https://downloads.terraindetailstudio.com/releases/terrain_detail_studio-1.0.0.zip',
+      download_url: '/releases/terrain_detail_studio-1.0.0.zip',
       sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
       release_notes: 'Initial release',
       published_at: new Date().toISOString(),
