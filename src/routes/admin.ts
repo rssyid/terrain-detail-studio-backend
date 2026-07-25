@@ -56,8 +56,7 @@ adminRouter.post('/licenses', async (c) => {
     const [createdPlan] = await db.insert(plans).values({
       code: targetPlanCode,
       name: 'Individual Pro Subscription',
-      billingCycle: 'annual',
-      priceCents: 29900,
+      active: true,
     }).returning();
     planRecord = createdPlan;
   }
@@ -157,6 +156,16 @@ adminRouter.post('/releases', async (c) => {
     publishedAt: new Date(),
   }).returning();
 
+  await db.insert(auditLogs).values({
+    action: 'REGISTER_RELEASE',
+    targetType: 'RELEASE',
+    targetId: newRelease.id,
+    metadataJson: { version, download_url },
+  });
+
+  return c.json({ success: true, release: newRelease });
+});
+
 // GET /v1/admin/metrics
 adminRouter.get('/metrics', async (c) => {
   const allUsers = await db.select().from(users);
@@ -172,7 +181,7 @@ adminRouter.get('/metrics', async (c) => {
     total_users: allUsers.length,
     active_licenses: activeLicenses.length,
     expiring_in_30_days: expiringLicenses.length,
-    active_devices: allDevices.filter(d => d.status === 'active').length,
+    active_devices: allDevices.filter(d => !d.revokedAt).length,
     neon_db_status: 'connected',
     uptime_seconds: Math.floor(process.uptime()),
   });
@@ -200,14 +209,14 @@ adminRouter.get('/devices', async (c) => {
   return c.json({
     devices: allDevices.map(d => ({
       id: d.id,
-      label: d.hardwareName || d.deviceFingerprint,
-      platform: d.platformOS || 'Windows 11 x86_64',
+      label: d.label || d.installationIdHash,
+      platform: d.platform || 'Windows 11 x86_64',
       qgis_version: d.qgisVersion || '3.34.4',
       plugin_version: d.pluginVersion || '1.0.0',
       first_seen_at: d.firstSeenAt,
       last_seen_at: d.lastSeenAt,
       revoked_at: d.revokedAt,
-      status: d.status,
+      status: d.revokedAt ? 'revoked' : 'active',
     })),
   });
 });
