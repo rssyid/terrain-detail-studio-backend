@@ -18,7 +18,11 @@ const app = new Hono();
 
 // Global Middleware
 app.use('*', logger());
-app.use('*', cors());
+app.use('*', cors({
+  origin: '*',
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-API-Key', 'x-admin-api-key'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+}));
 
 // Health Check
 app.get('/health', (c) => c.json({ status: 'ok', service: 'Terrain Detail Studio API', timestamp: new Date().toISOString() }));

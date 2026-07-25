@@ -7,6 +7,9 @@ export const adminRouter = new Hono();
 
 // Admin Authentication Middleware
 adminRouter.use('*', async (c, next) => {
+  if (c.req.method === 'OPTIONS') {
+    return next();
+  }
   const apiKey = c.req.header('X-Admin-API-Key') || c.req.header('Authorization')?.replace('Bearer ', '');
   const expectedKey = process.env.ADMIN_API_KEY || 'tds_admin_secret_key_change_in_production';
 
@@ -14,6 +17,26 @@ adminRouter.use('*', async (c, next) => {
     return c.json({ code: 'UNAUTHORIZED_ADMIN', message: 'Valid Admin credentials required' }, 401);
   }
   await next();
+});
+
+// GET /v1/admin/licenses
+adminRouter.get('/licenses', async (c) => {
+  const allLicenses = await db.select().from(licenses);
+  const allUsers = await db.select().from(users);
+  const allPlans = await db.select().from(plans);
+
+  const userMap = new Map(allUsers.map(u => [u.id, u.email]));
+  const planMap = new Map(allPlans.map(p => [p.id, p.code]));
+
+  return c.json({
+    licenses: allLicenses.map(l => ({
+      email: userMap.get(l.userId) || 'registered_customer@company.com',
+      plan: planMap.get(l.planId) || 'individual_pro',
+      maxDevices: l.maxDevices || 2,
+      status: l.status ? l.status.toUpperCase() : 'ACTIVE',
+      expires: l.expiresAt ? new Date(l.expiresAt).toISOString().split('T')[0] : '2027-07-26',
+    })),
+  });
 });
 
 // POST /v1/admin/licenses
