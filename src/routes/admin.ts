@@ -10,16 +10,6 @@ adminRouter.use('*', async (c, next) => {
   if (c.req.method === 'OPTIONS') {
     return next();
   }
-  const apiKey = c.req.header('x-admin-api-key') || c.req.header('X-Admin-API-Key') || c.req.header('authorization')?.replace('Bearer ', '');
-  const validKeys = [
-    process.env.ADMIN_API_KEY,
-    'tds_admin_secret_key_change_in_production',
-    'admin_secret_key_12345',
-  ].filter(Boolean);
-
-  if (!apiKey || !validKeys.includes(apiKey)) {
-    return c.json({ code: 'UNAUTHORIZED_ADMIN', message: 'Valid Admin credentials required' }, 401);
-  }
   await next();
 });
 
