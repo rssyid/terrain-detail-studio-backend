@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db.js';
-import { users, refreshTokens, devices, licenses } from '../../db/schema.js';
+import { users, refreshTokens, devices, licenses, plans } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { SignJWT } from 'jose';
 import * as crypto from 'crypto';
@@ -61,10 +61,19 @@ authRouter.post('/token', async (c) => {
   });
 
   if (!license) {
-    // Automatically issue individual_pro license for dev/demo testing if none exists
+    let plan = await db.query.plans.findFirst();
+    if (!plan) {
+      const [newPlan] = await db.insert(plans).values({
+        code: 'individual_pro',
+        name: 'Individual Pro Subscription',
+        active: true,
+      }).returning();
+      plan = newPlan;
+    }
+
     const [newLic] = await db.insert(licenses).values({
       userId: user.id,
-      planId: (await db.query.plans.findFirst({ where: eq(users.status, 'active') }))?.id || '00000000-0000-0000-0000-000000000000',
+      planId: plan.id,
       status: 'active',
       startsAt: new Date(),
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
