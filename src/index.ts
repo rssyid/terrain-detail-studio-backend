@@ -35,6 +35,7 @@ app.route('/v1/devices', devicesRouter);
 app.route('/v1/offline-leases', offlineLeasesRouter);
 app.route('/v1', presetsReleasesRouter);
 app.route('/v1/admin', adminRouter);
+app.route('/v1/portal', adminRouter);
 app.route('/v1', usageDiagnosticsRouter);
 
 // Global Error Handler
