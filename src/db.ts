@@ -5,11 +5,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL is not set in environment variables');
-}
+const connectionString = process.env.DATABASE_URL || "postgresql://neondb_owner:npg_QwE6iCkO9hmJ@ep-lively-sea-az29lh7v-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
 
 const sql = neon(connectionString);
 export const db = drizzle(sql, { schema });
